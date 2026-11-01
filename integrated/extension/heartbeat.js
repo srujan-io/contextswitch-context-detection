@@ -1,1 +1,1 @@
-setInterval(()=>chrome.runtime.sendMessage({type:'INTEGRATION_HEARTBEAT'}).catch(()=>{}),2000);
+if(!globalThis.__CONTEXTSWITCH_HEARTBEAT_INSTALLED__){globalThis.__CONTEXTSWITCH_HEARTBEAT_INSTALLED__=true;setInterval(()=>{if(globalThis.__CONTEXTSWITCH_PAGE_ALLOWED__!==false)chrome.runtime.sendMessage({type:'INTEGRATION_HEARTBEAT'}).catch(()=>{});},2000);}

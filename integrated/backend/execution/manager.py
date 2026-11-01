@@ -28,6 +28,15 @@ class ExecutionManager:
         self.expire()
         return tab_id in self.in_flight or bool(self.queues.get(tab_id))
 
+    def cancel_tab(self,tab_id):
+        with self.lock:
+            self.queues.pop(tab_id,None);self.in_flight.pop(tab_id,None);self.deadlines.pop(tab_id,None)
+            for job in self.jobs.values():
+                if job['tab_id']==tab_id and job['status'] in ('QUEUED','RUNNING'):
+                    job['status']='CANCELLED';job['error']='Website permission revoked';job['updated_at']=now()
+                    for action in job['actions']:
+                        if action['status'] in ('PENDING','RUNNING'):action['status']='CANCELLED'
+
     def submit(self, tab_id, validated):
         if not validated.get("valid") or not validated.get("execution_ready"):
             raise ValueError("Plan is invalid or awaiting confirmation.")

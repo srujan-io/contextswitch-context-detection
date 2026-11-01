@@ -511,6 +511,9 @@
   // ============================================
 
   chrome.runtime.onMessage.addListener((message) => {
+    if(message.type==='PRIVACY_REVOKED'){trackingLost();zoomActive=false;statusBadge.style.display='none';return;}
+    if(message.type==='PRIVACY_GRANTED'){statusBadge.style.display='block';return;}
+    if(globalThis.__CONTEXTSWITCH_PAGE_ALLOWED__===false)return;
     if (message.type === "CONTEXTSWITCH_STATUS") {
       updateStatus(Boolean(message.connected));
       if(!message.connected) {trackingLost();zoomActive=false;}

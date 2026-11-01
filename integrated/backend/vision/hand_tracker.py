@@ -5,6 +5,7 @@ from pathlib import Path
 
 import cv2
 import mediapipe as mp
+from vision.hand_availability import assess_hands
 
 
 class HandTracker:
@@ -24,7 +25,7 @@ class HandTracker:
         options = HandLandmarkerOptions(
             base_options=BaseOptions(model_asset_path=str(model_path)),
             running_mode=RunningMode.VIDEO,
-            num_hands=1,
+            num_hands=2,
             min_hand_detection_confidence=0.6,
             min_hand_presence_confidence=0.6,
             min_tracking_confidence=0.6,
@@ -35,6 +36,7 @@ class HandTracker:
         self.last_timestamp = -1
 
         self.pinch_active = False
+        self.primary_label=None
         self.pinch_start_threshold = 0.32
         self.pinch_release_threshold = 0.45
 
@@ -75,9 +77,19 @@ class HandTracker:
                 "pinching": False,
                 "pinch_event": None,
                 "pinch_ratio": None,
+                **assess_hands([]),
             }
 
-        landmarks = result.hand_landmarks[0]
+        availability=assess_hands(result.hand_landmarks)
+        labels=[result.handedness[i][0].category_name if i<len(result.handedness) and result.handedness[i] else str(i) for i in range(len(result.hand_landmarks))]
+        primary=labels.index(self.primary_label) if self.primary_label in labels else 0
+        changed=self.primary_label is not None and labels[primary]!=self.primary_label
+        if changed:self.pinch_active=False
+        self.primary_label=labels[primary]
+        landmarks = result.hand_landmarks[primary]
+        if not availability['hands'][primary]['fully_visible']:
+            self.pinch_active=False
+            return {'detected':False,'pinching':False,'index_x':None,'index_y':None,**availability}
         # Index + middle extended, ring + pinky curled. Thumb does not arm scroll.
         scroll_pose = (landmarks[8].y < landmarks[6].y and landmarks[12].y < landmarks[10].y
                        and landmarks[16].y > landmarks[14].y and landmarks[20].y > landmarks[18].y)
@@ -156,6 +168,8 @@ class HandTracker:
             "pinch_ratio": round(pinch_ratio, 3),
             "scroll_pose": bool(scroll_pose),
             "control_ready": bool(landmarks[8].y < landmarks[6].y),
+            "control_hand_changed":changed,
+            **availability,
         }
 
     def close(self):

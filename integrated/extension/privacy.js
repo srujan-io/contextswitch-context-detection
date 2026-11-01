@@ -13,6 +13,7 @@ async function registerPages(){
  await chrome.scripting.registerContentScripts([{id:'contextswitch-pages',matches:grantedOrigins,js:['kicanvas.js','content.js','gestures.js','heartbeat.js'],runAt:'document_idle',persistAcrossSessions:false}]);
 }
 async function loadPrivacy(){
+ for(const id of (await chrome.storage.local.get('privacyKnownTabs')).privacyKnownTabs||[])knownTabs.add(id);
  const saved=(await chrome.storage.local.get(PRIVACY_KEY))[PRIVACY_KEY];
  grantedOrigins=(saved?.origins||[]).filter(p=>SITE_ORIGINS.includes(p));
  pageConsent=!!saved?.approved&&grantedOrigins.length>0&&await chrome.permissions.contains({origins:grantedOrigins});
@@ -24,21 +25,27 @@ async function injectPage(tab){
  await chrome.scripting.executeScript({target:{tabId:tab.id},files:['kicanvas.js','content.js','gestures.js','heartbeat.js']});
  await chrome.tabs.sendMessage(tab.id,{type:'PRIVACY_GRANTED'}).catch(()=>{});
  knownTabs.add(tab.id);
+ await chrome.storage.local.set({privacyKnownTabs:[...knownTabs]});
 }
 async function grantPages(origins){
+ privacyReady=false;
  const selected=origins.filter(p=>SITE_ORIGINS.includes(p));
  if(!selected.length||!await chrome.permissions.contains({origins:selected}))throw Error('Chrome has not granted the selected website permissions.');
- grantedOrigins=selected;pageConsent=true;privacyReady=true;
+ grantedOrigins=selected;pageConsent=true;
  await chrome.storage.local.set({[PRIVACY_KEY]:{approved:true,origins:selected,grantedAt:Date.now()}});
  await registerPages();
  const tabs=await chrome.tabs.query({});
+ const pending=(await chrome.storage.local.get('privacyRevocations')).privacyRevocations||[];
+ await chrome.storage.local.set({privacyRevocations:[...new Set([...pending,...tabs.filter(t=>permittedUrl(t.url)).map(t=>t.id)])]});
  for(const tab of tabs.filter(t=>permittedUrl(t.url)))await injectPage(tab).catch(()=>{});
+ privacyReady=true;
  return {approved:true,origins:selected};
 }
 async function revokePages(){
  const targets=[...knownTabs];const previous=grantedOrigins;
  pageConsent=false;grantedOrigins=[];
- await chrome.storage.local.set({[PRIVACY_KEY]:{approved:false,origins:[]},privacyRevocations:targets,resultOutbox:{}});
+ const pending=(await chrome.storage.local.get('privacyRevocations')).privacyRevocations||[];
+ await chrome.storage.local.set({[PRIVACY_KEY]:{approved:false,origins:[]},privacyRevocations:[...new Set([...pending,...targets])],privacyKnownTabs:[],resultOutbox:{}});
  if(socket){socket.close();socket=null;}
  await registerPages();
  await Promise.allSettled(targets.map(id=>chrome.tabs.sendMessage(id,{type:'PRIVACY_REVOKED'})));

@@ -87,6 +87,7 @@ class CameraRuntime:
         try:
             while not self.stop.is_set():
                 if self.paused:
+                    self.arbiter.hand_valid=False
                     self.preview=None
                     self.arbiter.head_valid=False
                     if last_status!='PAUSED':self.fusion.disconnect()
@@ -138,6 +139,13 @@ class CameraRuntime:
                 pose = head.process(frame)
                 pose['timestamp_monotonic']=captured_at
                 hand_data = hand.process(frame)
+                hand_valid=bool(hand_data.get('detected')) and (not self.context_shift or not self.context_shift.enabled or hand_data.get('both_hands_visible',False))
+                if self.arbiter.hand_valid and not hand_valid:self.publish(translator.make_event('HAND','TRACKING_LOST'))
+                self.arbiter.hand_valid=hand_valid
+                if hand_data.get('control_hand_changed'):
+                    for event in translator.process_hand(None):
+                        if event['action']!='PINCH_END':self.publish(event)
+                    zoom.process(None);scroll.process(None,time.monotonic())
                 state = "TRACKING" if pose.get("valid_for_actions") or hand_data.get("detected") else pose.get("tracking_status","LOST")
                 if state != last_status or time.monotonic()-last_heartbeat > 1.5:
                     self.status(state); last_status, last_heartbeat = state, time.monotonic()
@@ -150,7 +158,7 @@ class CameraRuntime:
                     cv2.putText(frame,f"Head: {self.head_state['state']}",(12,25),cv2.FONT_HERSHEY_SIMPLEX,.55,color,1,cv2.LINE_AA)
                     encoded_ok,encoded=cv2.imencode('.jpg',frame,[cv2.IMWRITE_JPEG_QUALITY,65])
                     if encoded_ok:self.preview=base64.b64encode(encoded).decode('ascii');self.preview_time=time.monotonic()
-                if self.context_shift:self.context_shift.observe_visual(self.arbiter.head_valid,hand_data.get('detected') and hand_data.get('control_ready'))
+                if self.context_shift:self.context_shift.observe_visual(self.arbiter.head_valid,hand_data.get('detected') and hand_data.get('control_ready'),hand_data)
                 scroll_events=scroll.process(hand_data,time.monotonic())
                 zoom_events = [translator.make_event("HAND",name,p) for name,p in zoom.process(None if hand_data.get('scroll_pose') else hand_data)]
                 self.detail = "Head calibrated — return to neutral between gestures" if gestures.neutral else "Look straight ahead and hold still to calibrate"
@@ -165,6 +173,7 @@ class CameraRuntime:
                 for event in zoom_events+events+hand_events+[translator.make_event('HAND',name,p) for name,p in scroll_events]:
                     self.publish(event)
         except Exception as exc:
+            self.arbiter.hand_valid=False
             self.preview=None
             self.cancel()
             self.status("UNAVAILABLE", f"{type(exc).__name__}: {exc}")

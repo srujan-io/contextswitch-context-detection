@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { LiveConsole } from './LiveConsole';
+import { ExtensionConsent } from './ExtensionConsent';
 import { Header } from "./Header";
 import { ActiveModalityCard } from "./ActiveModalityCard";
 import { ModalityStrip } from "./ModalityStrip";
@@ -20,7 +21,7 @@ const TABS = [
 type Tab = (typeof TABS)[number]["id"];
 
 /** The Chrome extension popup surface (400×600). Bundle this for the MV3 action popup. */
-export function PopupView() { return <LiveConsole surface="popup" />; }
+export function PopupView() { return <ExtensionConsent><LiveConsole surface="popup" /></ExtensionConsent>; }
 export function SimulationPopupView() {
   const [view, setView] = useState<"main" | "settings">("main");
   const [tab, setTab] = useState<Tab>("activity");

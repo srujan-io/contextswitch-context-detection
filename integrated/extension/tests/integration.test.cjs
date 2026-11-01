@@ -28,14 +28,15 @@ test('pinch click works; tracking loss, zoom and agent cancellation never click'
  const before=g.messages.filter(e=>e.type==='wheel').length;g.send({source:'HEAD',action:'HEAD_TILT_RIGHT'});assert.equal(g.messages.filter(e=>e.type==='wheel').length,before);
  hand('PINCH_ZOOM_END');assert.equal(g.messages.filter(e=>e.type==='click').length,1);
 });
-function worker(shared={}){
+function worker(shared={},consented=true){
+ if(consented && !shared["contextswitch.pageConsent.v1"])shared["contextswitch.pageConsent.v1"]={approved:true,origins:["https://kicanvas.org/*"]};
  const calls=[],sent=[],handlers={},storage=shared,queue=[];
  const ev=()=>({addListener:f=>{}});
- const chrome={storage:{local:{get:async key=>({[key]:storage[key]}),set:async obj=>Object.assign(storage,obj)}},tabs:{query:async()=>[{id:7,url:'https://kicanvas.org/'}],get:async id=>({id,url:'https://kicanvas.org/'}),sendMessage:async(id,m)=>{sent.push({id,m});return m.type==='REQUEST_CONTEXT'?{context:{url:'https://kicanvas.org/',title:'Schematic'}}:m.type==='EXECUTE_ACTION'?{status:'UNVERIFIED',verified:false}:{};},onActivated:ev(),onUpdated:ev(),onRemoved:ev()},runtime:{onConnect:ev(),onMessage:{addListener:f=>handlers.message=f},onInstalled:ev(),onStartup:ev()},alarms:{create(){},onAlarm:ev()}};
+ const chrome={permissions:{contains:async()=>consented,remove:async()=>true,onRemoved:ev()},scripting:{unregisterContentScripts:async()=>{},registerContentScripts:async()=>{},executeScript:async()=>{}},storage:{local:{get:async key=>({[key]:storage[key]}),set:async obj=>Object.assign(storage,obj)}},tabs:{query:async()=>[{id:7,url:'https://kicanvas.org/'}],get:async id=>({id,url:'https://kicanvas.org/'}),sendMessage:async(id,m)=>{sent.push({id,m});return m.type==='REQUEST_CONTEXT'?{context:{url:'https://kicanvas.org/',title:'Schematic'}}:m.type==='EXECUTE_ACTION'?{status:'UNVERIFIED',verified:false}:{};},onActivated:ev(),onUpdated:ev(),onRemoved:ev()},runtime:{onConnect:ev(),onMessage:{addListener:f=>handlers.message=f},onInstalled:ev(),onStartup:ev()},alarms:{create(){},onAlarm:ev()}};
  class WS{static OPEN=1;constructor(){this.readyState=1;WS.last=this;}send(){}close(){this.readyState=3;this.onclose?.();}}
- const context=vm.createContext({chrome,WebSocket:WS,AbortSignal,Date,console,setInterval(){},fetch:async(url,opts={})=>{calls.push({url,opts});const data=url.includes('/actions/next')?{action:queue.shift()||null}:url.includes('/context/update')?{context:JSON.parse(opts.body)}:url.includes('/system/state')?{sensors:{}}:{};return{ok:true,json:async()=>data};}});
+ const context=vm.createContext({chrome,URL,importScripts:name=>vm.runInContext(fs.readFileSync(path.join(__dirname,'..',name),'utf8'),context),WebSocket:WS,AbortSignal,Date,console,setInterval(){},fetch:async(url,opts={})=>{calls.push({url,opts});const data=url.includes('/actions/next')?{action:queue.shift()||null}:url.includes('/context/update')?{context:JSON.parse(opts.body)}:url.includes('/system/state')?{sensors:{}}:{};return{ok:true,json:async()=>data};}});
  vm.runInContext(fs.readFileSync(path.join(__dirname,'../background.js'),'utf8'),context);
- return{calls,sent,queue,WS,shared:storage,async settle(){for(let i=0;i<30;i++)await new Promise(r=>setImmediate(r));},run:()=>vm.runInContext('tick()',context)};
+ return{calls,sent,queue,WS,context,shared:storage,async settle(){for(let i=0;i<30;i++)await new Promise(r=>setImmediate(r));},run:()=>vm.runInContext('tick()',context)};
 }
 test('worker merges top-level tab context, queues by tab and reports truthful results',async()=>{
  const w=worker();await w.settle();
@@ -46,6 +47,17 @@ test('worker merges top-level tab context, queues by tab and reports truthful re
  const result=w.calls.find(c=>c.url.endsWith('/actions/result'));assert.equal(JSON.parse(result.opts.body).status,'UNVERIFIED');
  w.queue.push({action_id:'a1',tab_id:7,action:'zoom_in'});await w.run();assert.equal(w.sent.filter(s=>s.m.type==='EXECUTE_ACTION').length,1);
 });
+test('without explicit consent the worker makes no backend request or page read',async()=>{
+ const w=worker({},false);await w.settle();await w.run();
+ assert.equal(w.calls.length,0);assert.equal(w.sent.length,0);assert.equal(w.WS.last,undefined);
+});
+test('revoking consent stops page reads and cancels previous queued work',async()=>{
+ const w=worker();await w.settle();
+ await vm.runInContext('revokePages()',w.context);
+ const count=w.sent.length;await w.run();assert.equal(w.sent.length,count);
+ assert.equal(w.shared['contextswitch.pageConsent.v1'].approved,false);
+ assert.ok(w.calls.some(c=>c.url.endsWith('/system/browser/revoke')));
+});
 test('worker reconnect rejects stale gestures and persistent attempt marker prevents replay',async()=>{
  const w=worker({executedActions:{old:Date.now()}});await w.settle();
  w.queue.push({action_id:'old',tab_id:7,action:'zoom_in'});await w.run();assert.equal(w.sent.filter(s=>s.m.type==='EXECUTE_ACTION').length,0);
@@ -53,4 +65,6 @@ test('worker reconnect rejects stale gestures and persistent attempt marker prev
  await w.WS.last.onmessage({data:JSON.stringify({source:'HAND',action:'CURSOR_MOVE',parameters:{x:.5,y:.5},timestamp:Date.now()})});assert.equal(w.sent.length,before+1);
  w.WS.last.close();await w.run();assert.equal(w.WS.last.readyState,1);
 });
+
+
 

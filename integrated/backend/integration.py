@@ -32,7 +32,7 @@ previews = {}
 preview_lock = __import__("threading").Lock()
 semantic_pipeline = None
 voice_capture = {"phase":"IDLE"}
-BUILD = "contextswitch-2026.11.01.6"
+BUILD = "contextswitch-2026.11.01.7"
 auto_shift=ContextShift()
 calibration_stop=__import__('threading').Event()
 calibration_thread=None
@@ -294,6 +294,20 @@ class AutoCalibration(BaseModel):
     device_index: int | None = Field(default=None,ge=0)
 
 
+class BrowserRevoke(BaseModel):
+    tab_ids: list[int] = Field(default_factory=list,max_length=1000)
+
+
+@app.post('/system/browser/revoke')
+def revoke_browser(body: BrowserRevoke):
+    for tab_id in body.tab_ids:
+        execution_manager.cancel_tab(tab_id);store.remove(tab_id)
+        for token,item in list(previews.items()):
+            if item['context'].get('tab_id')==tab_id:previews.pop(token,None)
+    camera.cancel()
+    return {'revoked_tabs':body.tab_ids,'status':'CANCELLED'}
+
+
 class IMUConnection(BaseModel):
     port: str = Field(default='',max_length=128)
     baud: int = Field(default=115200,ge=1200,le=2000000)
@@ -322,6 +336,9 @@ def calibrate_context(body: AutoCalibration):
     global calibration_thread
     if calibration_thread and calibration_thread.is_alive():raise HTTPException(409,'Calibration is already running')
     calibration_stop.clear();auto_shift.start(body.pre_context,body.hands_occupied)
+    if camera.paused:
+        camera.paused=False;camera.retry_camera.set();camera.status('RECOVERING')
+        if not camera.thread or not camera.thread.is_alive():camera.start()
     camera.recenter.set();camera.cancel()
     arbiter.active='TYPED'
     def sample_audio():

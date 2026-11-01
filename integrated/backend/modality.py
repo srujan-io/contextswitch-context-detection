@@ -8,6 +8,7 @@ class Arbiter:
         self.active = "HEAD_HAND"
         self.zoom_until = 0
         self.head_valid=False
+        self.hand_valid=True
         self.scroll_until=0.
 
     def status(self, sensor, status):
@@ -34,7 +35,7 @@ class Arbiter:
         stamp = event.get("timestamp", 0)
         if not isinstance(stamp, (int,float)) or not 0 <= time.time()*1000-stamp <= 700:
             return False
-        valid = self.head_valid if event.get('source')=='HEAD' else self.sensors['CAMERA']['status']=='TRACKING'
+        valid = self.head_valid if event.get('source')=='HEAD' else self.hand_valid and self.sensors['CAMERA']['status']=='TRACKING'
         if busy or self.active not in ("HEAD_HAND", event.get("source")) or not valid:
             return False
         if action in ("PINCH_ZOOM_START", "PINCH_ZOOM"):

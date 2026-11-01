@@ -29,11 +29,13 @@ function connect(){
  current.onerror=()=>current.close();
 }
 async function sync(tabId){
- const tab=await chrome.tabs.get(tabId);if(!permittedUrl(tab.url))return;knownTabs.add(tabId);
+ const tab=await chrome.tabs.get(tabId);if(!permittedUrl(tab.url))return;
+ if(!knownTabs.has(tabId)){knownTabs.add(tabId);await chrome.storage.local.set({privacyKnownTabs:[...knownTabs]});}
  const response=await chrome.tabs.sendMessage(tabId,{type:'REQUEST_CONTEXT'});if(!response?.context)return;
+ if(!pageConsent)return;
  const data=await api('/context/update',{...response.context,tab_id:tabId});
  const [active]=await chrome.tabs.query({active:true,lastFocusedWindow:true});
- if(active?.id===tabId)await api(`/context/activate/${tabId}`,{});return data.context;
+ if(pageConsent&&active?.id===tabId)await api(`/context/activate/${tabId}`,{});return data.context;
 }
 async function flushResults(){
  const all=await chrome.storage.local.get('resultOutbox');
@@ -46,13 +48,16 @@ async function runAction(tabId){
  const tab=await chrome.tabs.get(tabId);if(!permittedUrl(tab.url))return;
  const{action}=await api(`/actions/next?tab_id=${tabId}`);if(!action)return;busy.add(tabId);
  try{
+  if(!pageConsent)return;
   await chrome.tabs.sendMessage(tabId,{type:'CONTEXTSWITCH_CV',event:{source:'HAND',action:'TRACKING_LOST'}}).catch(()=>{});
   const marks=(await chrome.storage.local.get('executedActions')).executedActions||{};let result;
   if(marks[action.action_id])result={status:'UNVERIFIED',verified:false,error:'Already attempted; not replayed after restart'};
   else{
    marks[action.action_id]=Date.now();await chrome.storage.local.set({executedActions:Object.fromEntries(Object.entries(marks).slice(-500))});
+   if(!pageConsent)return;
    try{result=await chrome.tabs.sendMessage(tabId,{type:'EXECUTE_ACTION',action});}catch(e){result={status:'FAILED',verified:false,error:e.message};}
   }
+  if(!pageConsent)return;
   const outbox=(await chrome.storage.local.get('resultOutbox')).resultOutbox||{};
   outbox[action.action_id]={action_id:action.action_id,tab_id:tabId,status:result?.status||'FAILED',verified:result?.verified===true,result:result?.result||{},error:result?.error||null};
   await chrome.storage.local.set({resultOutbox:outbox});await flushResults();

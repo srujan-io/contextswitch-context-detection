@@ -1,5 +1,7 @@
 // KiCanvas UI adapter. Traverse open shadow roots without running page code.
 (() => {
+  let executionEpoch=0;
+  function cancelPending(){executionEpoch++;}
   function queryAll(selector, root = document) {
     const found = [...root.querySelectorAll(selector)];
     if (root.shadowRoot) found.push(...queryAll(selector, root.shadowRoot));
@@ -18,6 +20,7 @@
   async function waitFor(read, timeout = 2500) {
     const deadline = Date.now() + timeout;
     do {
+      if(globalThis.__CONTEXTSWITCH_PAGE_ALLOWED__===false)return null;
       const value = read();
       if (value) return value;
       await new Promise(resolve => setTimeout(resolve, 50));
@@ -28,6 +31,10 @@
   const normalizeReference = value => String(value || "").replace(/\s+/g, "").toUpperCase();
 
   async function searchComponent(value) {
+    const epoch=executionEpoch;
+    const cancelled=()=>epoch!==executionEpoch||globalThis.__CONTEXTSWITCH_PAGE_ALLOWED__===false;
+    const revoked=()=>({status:'FAILED',verified:false,error:'Website permission was revoked; execution cancelled.'});
+    if(cancelled())return revoked();
     const raw = String(value || "").trim();
     if (!/^[A-Za-z]{1,3}\s*\d+[A-Za-z]?$/.test(raw)) {
       return {status: "FAILED", verified: false, error: "Invalid component reference."};
@@ -44,6 +51,7 @@
     }
     const input = await waitFor(() => queryAll("kc-ui-text-filter-input input", panel).find(visible)
       || queryAll("input", panel).find(visible));
+    if(cancelled())return revoked();
     if (!input) return {status: "FAILED", verified: false, error: "Component search input unavailable."};
 
     const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value").set;
@@ -62,6 +70,7 @@
     if (!await waitFor(() => visible(item))) {
       return {status: "FAILED", verified: false, error: "Matching component is hidden by the Symbols filter."};
     }
+    if(cancelled())return revoked();
     item.scrollIntoView({block: "nearest"});
     item.click();
     // KiCanvas enables this control after its viewer emits a selection event.
@@ -70,6 +79,7 @@
       return item.hasAttribute("selected") && button && !button.hasAttribute("disabled") ? button : null;
     });
     if (!zoom) return {status: "UNVERIFIED", verified: false, result: {reference}, error: "Component click sent, but viewer selection was not confirmed."};
+    if(cancelled())return revoked();
     zoom.click();
     return {status: "SUCCESS", verified: true, result: {
       reference, selected: true, zoom_to_selection_requested: true,
@@ -78,5 +88,5 @@
   }
 
   function surface() { return queryAll('canvas').find(visible) || queryAll('svg').find(visible) || null; }
-  window.BeyondTouchKiCanvas = {searchComponent, surface};
+  window.BeyondTouchKiCanvas = {searchComponent, surface, cancelPending};
 })();

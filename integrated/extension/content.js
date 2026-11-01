@@ -1,6 +1,7 @@
 (() => {
   if (window.__beyondTouchInstalled) return;
   window.__beyondTouchInstalled = true;
+  globalThis.__CONTEXTSWITCH_PAGE_ALLOWED__=true;
   const clean = (v, n=180) => (v || "").replace(/\s+/g," ").trim().slice(0,n);
 
   function pageType() {
@@ -63,10 +64,11 @@
   }
   let updateTimer;
   function sendUpdate(reason) {
+    if(globalThis.__CONTEXTSWITCH_PAGE_ALLOWED__===false)return;
     clearTimeout(updateTimer);
-    updateTimer=setTimeout(()=>chrome.runtime.sendMessage({
+    updateTimer=setTimeout(()=>{if(globalThis.__CONTEXTSWITCH_PAGE_ALLOWED__===false)return;chrome.runtime.sendMessage({
       type:"CONTEXT_UPDATE",context:collectContext(reason)
-    }).catch(()=>{}),250);
+    }).catch(()=>{});},250);
   }
 
   // Module E: allowlisted KiCanvas action handlers.
@@ -137,6 +139,9 @@
   }
 
   chrome.runtime.onMessage.addListener((message,sender,sendResponse)=>{
+    if(message?.type==='PRIVACY_REVOKED'){globalThis.__CONTEXTSWITCH_PAGE_ALLOWED__=false;clearTimeout(updateTimer);window.BeyondTouchKiCanvas?.cancelPending?.();return;}
+    if(message?.type==='PRIVACY_GRANTED'){globalThis.__CONTEXTSWITCH_PAGE_ALLOWED__=true;sendUpdate('permission_granted');return;}
+    if(globalThis.__CONTEXTSWITCH_PAGE_ALLOWED__===false)return;
     if(message?.type==="REQUEST_CONTEXT") {
       sendResponse({context:collectContext("context_requested")});
       return;
@@ -151,7 +156,7 @@
   document.addEventListener("click",()=>sendUpdate("click"));
   document.addEventListener("change",()=>sendUpdate("input_change"));
   let lastUrl=location.href;
-  setInterval(()=>{if(location.href!==lastUrl){lastUrl=location.href;sendUpdate("url_change");}},1000);
+  setInterval(()=>{if(globalThis.__CONTEXTSWITCH_PAGE_ALLOWED__!==false&&location.href!==lastUrl){lastUrl=location.href;sendUpdate("url_change");}},1000);
   sendUpdate("initial_load");
   chrome.runtime.sendMessage({type:"START_ACTION_POLLING"}).catch(()=>{});
 })();

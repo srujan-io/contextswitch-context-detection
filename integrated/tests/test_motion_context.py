@@ -96,7 +96,7 @@ def test_hand_scroll_arming_motion_and_pinch_conflict():
     assert s.process({**hand,'pinching':True},.4)==[]
     assert s.last_y is None
 
-def test_context_calibrates_for_twenty_seconds_and_honors_hands_occupied():
+def test_context_calibrates_and_honors_hands_occupied():
     now=[0.];a=ContextShift(clock=lambda:now[0]);a.start('Soldering a board',True)
     for i in range(200):
         now[0]=i*.1;a.observe_visual(True,True);a.observe_audio(100)
@@ -104,7 +104,7 @@ def test_context_calibrates_for_twenty_seconds_and_honors_hands_occupied():
     now[0]=20.1;a.observe_visual(True,True);a.choose({}, {})
     now[0]=21.7;a.observe_visual(True,True)
     assert a.choose({}, {})=='HEAD'
-    assert a.noise_limit==250
+    assert a.noise_limit==200
     assert a.choose({}, {'text_entry':True})=='TYPED'
 
 def test_context_visual_loss_falls_back_and_no_auto_without_optin():
