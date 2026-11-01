@@ -1,0 +1,10 @@
+{
+  "website_id": "unknown",
+  "website_name": "Unknown website",
+  "description": "Fallback capabilities for websites without a dedicated skill pack.",
+  "capabilities": ["scroll", "pause_tracking", "resume_tracking"],
+  "safety": {
+    "allow_arbitrary_javascript": false,
+    "allow_site_specific_actions": false
+  }
+}

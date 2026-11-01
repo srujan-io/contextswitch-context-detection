@@ -1,0 +1,9 @@
+.venv/
+.uv-cache/
+.env
+node_modules/
+__pycache__/
+.pytest_cache/
+*.log
+frontend/dist/
+extension/ui/

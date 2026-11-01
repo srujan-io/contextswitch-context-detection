@@ -1,0 +1,7 @@
+-r requirements.txt
+opencv-python>=4.10,<5
+mediapipe>=0.10.20,<0.11
+numpy>=1.26,<3
+sounddevice>=0.5,<1
+pyserial>=3.5,<4
+SpeechRecognition[audio]>=3.10,<4

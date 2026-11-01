@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>ContextSwitch</title>
+    <style>
+      html,
+      body,
+      #root {
+        width: 400px;
+        min-width: 400px;
+        height: 600px;
+        margin: 0;
+      }
+
+      body {
+        background: #f5f6f3;
+      }
+
+      #popup-diagnostic {
+        position: fixed;
+        inset: 12px;
+        z-index: 9999;
+        padding: 16px;
+        overflow: auto;
+        background: #2b1717;
+        color: #fff;
+        font: 13px/1.5 monospace;
+        white-space: pre-wrap;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="root"></div>
+    <div id="popup-diagnostic" role="alert" hidden></div>
+    <script type="module" src="/src/extension.tsx"></script>
+  </body>
+</html>

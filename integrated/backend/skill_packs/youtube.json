@@ -1,0 +1,54 @@
+{
+  "website_id": "youtube",
+  "website_name": "YouTube",
+  "description": "General-purpose video learning and content interaction.",
+  "supported_page_types": [
+    "homepage",
+    "video_player",
+    "search_results",
+    "playlist",
+    "channel_page",
+    "shorts",
+    "other"
+  ],
+  "supported_activities": [
+    "cooking",
+    "taking_notes",
+    "learning",
+    "vehicle_repair",
+    "diy_projects",
+    "dance_learning",
+    "fitness",
+    "entertainment"
+  ],
+  "capabilities": [
+    "play_video",
+    "pause_video",
+    "resume_video",
+    "seek_forward",
+    "seek_backward",
+    "adjust_volume",
+    "scroll",
+    "search_videos",
+    "open_video",
+    "toggle_fullscreen",
+    "change_playback_speed",
+    "view_video_details"
+  ],
+  "context_elements": [
+    "video_player",
+    "video_title",
+    "video_description",
+    "search_bar",
+    "recommended_videos",
+    "video_progress",
+    "play_pause_button",
+    "volume_control",
+    "comments",
+    "playlist"
+  ],
+  "safety": {
+    "allow_arbitrary_javascript": false,
+    "require_confirmation_for_external_actions": true
+  }
+}

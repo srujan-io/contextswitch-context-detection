@@ -1,0 +1,25 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <style>
+    body { font: 13px Arial, sans-serif; width: 320px; padding: 12px; }
+    h3 { margin: 0 0 10px; }
+    pre { white-space: pre-wrap; overflow-wrap: anywhere; background: #f3f4f6; padding: 9px; border-radius: 6px; }
+    .muted { color: #666; }
+  </style>
+</head>
+<body>
+  <h3>Beyond Touch Context</h3>
+  <div id="status" class="muted">Loading active tab context…</div>
+  <form id="search-form">
+    <p><label for="reference">Component reference</label></p>
+    <input id="reference" placeholder="R1" required pattern="[A-Za-z]{1,3}\s*\d+[A-Za-z]?">
+    <button id="search-button" type="submit">Find in KiCanvas</button>
+  </form>
+  <pre id="search-result" aria-live="polite">Open a schematic, enter a reference, and click Find.</pre>
+  <pre id="context">No context received yet.</pre>
+  <script src="config.js"></script>
+  <script src="popup.js"></script>
+</body>
+</html>

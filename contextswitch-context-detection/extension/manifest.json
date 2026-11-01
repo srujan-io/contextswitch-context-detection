@@ -1,0 +1,11 @@
+{
+  "manifest_version": 3,
+  "name": "Beyond Touch - Context Detector",
+  "version": "1.1.0",
+  "description": "Detects website context and executes validated browser actions.",
+  "permissions": ["tabs", "storage", "scripting"],
+  "host_permissions": ["<all_urls>", "http://127.0.0.1:8001/*"],
+  "background": {"service_worker": "background.js"},
+  "content_scripts": [{"matches": ["<all_urls>"], "js": ["kicanvas.js", "content.js"], "run_at": "document_idle"}],
+  "action": {"default_popup": "popup.html", "default_title": "Beyond Touch Context"}
+}

@@ -1,0 +1,27 @@
+{
+  "website_id": "kicanvas",
+  "website_name": "KiCanvas",
+  "description": "Browser-based viewing and interaction with KiCad schematics.",
+  "supported_page_types": ["schematic_viewer"],
+  "capabilities": [
+    "zoom_in",
+    "zoom_out",
+    "pan",
+    "select_component",
+    "view_component_details",
+    "search_component"
+  ],
+  "context_elements": [
+    "schematic_canvas",
+    "component",
+    "component_reference",
+    "component_value",
+    "connection",
+    "toolbar",
+    "search"
+  ],
+  "safety": {
+    "allow_arbitrary_javascript": false,
+    "require_confirmation_for_design_changes": true
+  }
+}

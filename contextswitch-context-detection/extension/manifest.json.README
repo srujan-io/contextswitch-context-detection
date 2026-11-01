@@ -1,0 +1,1 @@
+To enable the popup, add this to manifest.json: "action": {"default_popup": "popup.html", "default_title": "Beyond Touch Context"}. The popup files are included for debugging.

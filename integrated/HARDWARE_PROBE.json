@@ -1,0 +1,18 @@
+{
+  "camera": {
+    "frame_captured": true,
+    "models_loaded": true,
+    "head_status": "RECOVERING",
+    "hand_detected": false,
+    "live_gestures_verified": false
+  },
+  "microphone": {
+    "capture_succeeded": true,
+    "asr_verified": false,
+    "bytes_captured": 16384
+  },
+  "imu": {
+    "verified": false,
+    "detail": "No implemented firmware or serial contract supplied"
+  }
+}

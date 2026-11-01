@@ -1,0 +1,12 @@
+{
+  "port": "COM7",
+  "baud": 115200,
+  "signature_verified": false,
+  "decoded_samples": 0,
+  "sample_rate_hz": null,
+  "status_lines": [],
+  "errors": [
+    "Expected firmware V1 seven-column CSV"
+  ],
+  "physical_fusion_verified": false
+}

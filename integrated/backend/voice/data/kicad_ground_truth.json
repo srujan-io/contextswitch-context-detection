@@ -1,0 +1,40 @@
+{
+  "site_type": "KICAD_SCHEMATIC",
+  "components": [
+    {"id": "J101", "description": "I2C connector", "synonyms": ["J 101", "J-101", "jay one oh one", "I2C connector", "I2C port"], "facts": ["Carries SCL and SDA connections to the SAMD21 sheet"]},
+    {"id": "J102", "description": "SWD connector", "synonyms": ["J 102", "J-102", "jay one oh two", "SWD connector", "debug connector"], "facts": []},
+    {"id": "J106", "description": "USB connector", "synonyms": ["J 106", "J-106", "jay one oh six", "USB connector", "USB port"], "facts": ["USB_P and USB_N leave this connector and connect to the SAMD21 sheet through USB_DP and USB_DM"]},
+    {"id": "J107", "description": "MAX31865 extension connector", "synonyms": ["J 107", "J-107", "jay one oh seven", "MAX31865 connector", "MAX31865 extension", "extension connector"], "facts": []},
+    {"id": "J108", "description": "UART connector", "synonyms": ["J 108", "J-108", "jay one oh eight", "UART connector", "serial connector"], "facts": []},
+    {"id": "C101", "description": "4.7 nF capacitor between USB_SHIELD and ground", "synonyms": ["C 101", "C-101", "see one oh one", "USB shield capacitor"], "facts": ["4.7 nF", "Connected between USB_SHIELD and ground"]},
+    {"id": "R101", "description": "Resistor providing a parallel high-resistance path for the USB shield network", "synonyms": ["R 101", "R-101", "are one oh one", "USB shield resistor"], "facts": ["Provides a parallel high-resistance path"]},
+    {"id": "TP103", "description": null, "synonyms": ["TP 103", "TP-103", "tee pee one oh three", "test point 103"], "facts": []}
+  ],
+  "signals": [
+    {"id": "USB_DATA", "canonical": "USB_P, USB_N", "synonyms": ["USB D+ and D-", "USB D+ and D−", "USB data lines", "USB_P and USB_N", "USB signal"], "facts": ["USB_P and USB_N leave J106 and connect to the SAMD21 hierarchical sheet through USB_DP and USB_DM"]},
+    {"id": "I2C", "canonical": "SCL, SDA", "synonyms": ["I2C", "I2C connections", "SCL and SDA", "clock and data lines"], "facts": ["SCL and SDA connect from J101 to the SAMD21 sheet"]},
+    {"id": "USB_P", "canonical": "USB_P", "synonyms": ["USB_P", "USB P", "USB D+"], "facts": ["Leaves J106 and connects to the SAMD21 sheet through USB_DP"]},
+    {"id": "USB_N", "canonical": "USB_N", "synonyms": ["USB_N", "USB N", "USB D-", "USB D−"], "facts": ["Leaves J106 and connects to the SAMD21 sheet through USB_DM"]},
+    {"id": "USB_DP", "canonical": "USB_DP", "synonyms": ["USB_DP", "USB DP"], "facts": ["Hierarchical connection on the SAMD21 sheet corresponding to USB_P"]},
+    {"id": "USB_DM", "canonical": "USB_DM", "synonyms": ["USB_DM", "USB DM"], "facts": ["Hierarchical connection on the SAMD21 sheet corresponding to USB_N"]},
+    {"id": "SCL", "canonical": "SCL", "synonyms": ["SCL", "I2C clock"], "facts": ["Connects from J101 to the SAMD21 sheet"]},
+    {"id": "SDA", "canonical": "SDA", "synonyms": ["SDA", "I2C data"], "facts": ["Connects from J101 to the SAMD21 sheet"]}
+  ],
+  "sheets": [
+    {"id": "Embedded_v1.kicad_sch", "description": "Main schematic", "synonyms": ["main schematic", "main sheet", "root schematic", "Embedded v1", "Embedded_v1"]},
+    {"id": "2_5Vto3.3VRegulator", "description": "3.3-volt regulator sheet", "synonyms": ["3.3 volt regulator", "3.3-volt regulator", "3.3v regulator", "2.5v to 3.3v regulator", "regulator sheet", "3 3 volt regulator"]},
+    {"id": "3_uC_SAMD21", "description": "SAMD21 microcontroller sheet", "synonyms": ["SAMD21", "SAMD21 sheet", "microcontroller sheet", "microcontroller", "3 uC SAMD21"]}
+  ],
+  "sections": [
+    {"id": "USB", "description": "USB schematic section", "synonyms": ["USB section", "USB area", "USB part", "USB"]},
+    {"id": "I2C", "description": "I2C schematic section", "synonyms": ["I2C section", "I2C area", "I2C part"]}
+  ],
+  "issues": [
+    {"id": "USB_COMMUNICATION", "description": "Board is not communicating over USB", "synonyms": ["USB communication", "not communicating over USB", "board won't communicate over USB", "USB isn't working", "USB failure"], "suggested_checks": ["Check J106 connections", "Check USB_P and USB_N continuity", "Check the 3.3 V supply", "Check the SAMD21 USB configuration"]}
+  ],
+  "known_unknowns": {
+    "TP103_purpose": null,
+    "complete_BOM_assembly_sequence": null,
+    "unlisted_component_coordinates": null
+  }
+}
