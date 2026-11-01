@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { LiveView } from './LiveView';
 
-export type State = {sensors:Record<string,{status:string;timestamp:number}>;active_modality:string;recommended_modality:string;camera_detail:string;context:Record<string,unknown>;planner_configured:boolean;build?:string;browser_connected?:boolean;head?:{state:string;calibrated:boolean;delta:Record<string,number>;thresholds?:Record<string,number>;calibration_progress?:number};camera_performance?:{processing_fps:number;processing_ms:number};voice_capture?:{phase:string;level_hint?:string;duration_seconds?:number;rms?:number};context_shift?:{enabled:boolean;calibrating:boolean;seconds_remaining:number;mode:string;reason:string;audio_samples:number;visual_samples:number;audio_error?:string;instruction?:string;baseline_rms?:number|null;peak_rms?:number|null;peak_amplitude?:number|null;speech_to_noise_ratio?:number|null;hands?:{hand_count:number;fully_visible_count:number;both_hands_visible:boolean;two_hands_possibly_occupied:boolean;incomplete_frame:boolean}|null};fusion?:{mode:string;confidence:number;calibrated:boolean;detail:string};imu?:{status:string;detail:string}};
+export type State = {sensors:Record<string,{status:string;timestamp:number}>;active_modality:string;recommended_modality:string;camera_detail:string;context:Record<string,unknown>;planner_configured:boolean;build?:string;browser_connected?:boolean;head?:{state:string;calibrated:boolean;delta:Record<string,number>;thresholds?:Record<string,number>;calibration_progress?:number};camera_performance?:{processing_fps:number;processing_ms:number};voice_capture?:{phase:string;level_hint?:string;duration_seconds?:number;rms?:number};context_shift?:{enabled:boolean;calibrating:boolean;assessment_complete?:boolean;seconds_remaining:number;mode:string;reason:string;audio_samples:number;visual_samples:number;audio_error?:string;instruction?:string;baseline_rms?:number|null;peak_rms?:number|null;peak_amplitude?:number|null;speech_to_noise_ratio?:number|null;hands?:{hand_count:number;fully_visible_count:number;both_hands_visible:boolean;two_hands_possibly_occupied:boolean;incomplete_frame:boolean}|null};fusion?:{mode:string;confidence:number;calibrated:boolean;detail:string};imu?:{status:string;detail:string}};
 export type Preview = {preview_id:string;transcript:string;route:string;plan:{needs_clarification?:boolean;clarification_question?:string;steps:unknown[]};validation?:{requires_confirmation?:boolean;execution_ready?:boolean;confirmation_required?:boolean}};
 export type Job = {job_id:string;status:string;completed_steps:number;total_steps:number;results:unknown[]};
 type Port = {postMessage:(v:unknown)=>void;disconnect:()=>void;onMessage:{addListener:(f:(m:any)=>void)=>void};onDisconnect:{addListener:(f:()=>void)=>void}};
@@ -103,5 +103,6 @@ export function LiveConsole({surface='dashboard'}:{surface?:'dashboard'|'popup'}
   mode:modality=>void act(async()=>setState(await request('/system/modality',{modality}))),
  }}/>;
 }
+
 
 

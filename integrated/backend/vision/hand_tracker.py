@@ -6,6 +6,7 @@ from pathlib import Path
 import cv2
 import mediapipe as mp
 from vision.hand_availability import assess_hands
+from vision.hand_render import draw_hands
 
 
 class HandTracker:
@@ -83,10 +84,13 @@ class HandTracker:
         availability=assess_hands(result.hand_landmarks)
         labels=[result.handedness[i][0].category_name if i<len(result.handedness) and result.handedness[i] else str(i) for i in range(len(result.hand_landmarks))]
         primary=labels.index(self.primary_label) if self.primary_label in labels else 0
+        if not availability['hands'][primary]['fully_visible']:
+            primary=next((i for i,h in enumerate(availability['hands']) if h['fully_visible']),primary)
         changed=self.primary_label is not None and labels[primary]!=self.primary_label
         if changed:self.pinch_active=False
         self.primary_label=labels[primary]
         landmarks = result.hand_landmarks[primary]
+        draw_hands(frame,result.hand_landmarks,labels,primary,availability,self.connections,cv2)
         if not availability['hands'][primary]['fully_visible']:
             self.pinch_active=False
             return {'detected':False,'pinching':False,'index_x':None,'index_y':None,**availability}
@@ -125,28 +129,6 @@ class HandTracker:
                 self.pinch_active = False
                 pinch_event = "PINCH_END"
 
-        # Draw hand skeleton
-        for start, end in self.connections:
-            p1 = landmarks[start]
-            p2 = landmarks[end]
-
-            cv2.line(
-                frame,
-                (int(p1.x * width), int(p1.y * height)),
-                (int(p2.x * width), int(p2.y * height)),
-                (80, 220, 80),
-                2
-            )
-
-        # Draw all 21 landmarks
-        for i, point in enumerate(landmarks):
-            x = int(point.x * width)
-            y = int(point.y * height)
-
-            color = (0, 255, 255) if i in (4, 8) else (255, 100, 0)
-
-            cv2.circle(frame, (x, y), 5, color, -1)
-
         # Highlight fingertip
         ix = int(index.x * width)
         iy = int(index.y * height)
@@ -174,3 +156,4 @@ class HandTracker:
 
     def close(self):
         self.landmarker.close()
+

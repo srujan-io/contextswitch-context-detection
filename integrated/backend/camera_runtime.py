@@ -139,7 +139,7 @@ class CameraRuntime:
                 pose = head.process(frame)
                 pose['timestamp_monotonic']=captured_at
                 hand_data = hand.process(frame)
-                hand_valid=bool(hand_data.get('detected')) and (not self.context_shift or not self.context_shift.enabled or hand_data.get('both_hands_visible',False))
+                hand_valid=bool(hand_data.get('detected')) and (not self.context_shift or not self.context_shift.enabled or (hand_data.get('both_hands_visible',False) and hand_data.get('control_ready',False) and not hand_data.get('two_hands_possibly_occupied',False)))
                 if self.arbiter.hand_valid and not hand_valid:self.publish(translator.make_event('HAND','TRACKING_LOST'))
                 self.arbiter.hand_valid=hand_valid
                 if hand_data.get('control_hand_changed'):

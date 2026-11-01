@@ -32,7 +32,7 @@ previews = {}
 preview_lock = __import__("threading").Lock()
 semantic_pipeline = None
 voice_capture = {"phase":"IDLE"}
-BUILD = "contextswitch-2026.11.01.7"
+BUILD = "contextswitch-2026.11.01.8"
 auto_shift=ContextShift()
 calibration_stop=__import__('threading').Event()
 calibration_thread=None
@@ -129,6 +129,7 @@ def system_state():
             "head":camera.head_state,"voice_capture":voice_capture,
             "camera_performance":camera.performance,
             "context_shift":auto_shift.snapshot(),"fusion":camera.fusion.snapshot(),
+            "recommendation_only":not auto_shift.enabled,
             "imu":{"status":camera.imu.status,"detail":camera.imu.detail,"port":camera.imu.port or None},
             "context":store.get_active(),"planner_configured":bool(os.getenv("GEMINI_API_KEY")),
             "microphone_verified":arbiter.sensors["MICROPHONE"]["status"] == "AVAILABLE"}
@@ -170,6 +171,11 @@ def camera_preview():
 
 @app.post("/system/modality")
 def select_mode(body: Mode):
+    if body.modality=='AUTO':
+        if not auto_shift.finished:raise HTTPException(409,'Run the 15-second calibration first, then enable automatic switching.')
+        auto_shift.enabled=True;auto_shift.current='TYPED';auto_shift.candidate=None
+        arbiter.active='TYPED';camera.cancel()
+        return system_state()
     if body.modality not in ("HEAD_HAND","HEAD","HAND","TYPED","VOICE"):
         raise HTTPException(422,"Unknown modality")
     arbiter.active = body.modality
@@ -390,7 +396,7 @@ class VoiceCapture(BaseModel):
 def voice_phase(phase, detail=None):
     voice_capture.clear()
     voice_capture.update(phase=phase,**(detail or {}))
-    if detail and 'rms' in detail:auto_shift.observe_audio(detail['rms'])
+    # Utterance RMS includes speech and must not be mistaken for ambient noise.
 
 
 @app.post("/voice/listen")

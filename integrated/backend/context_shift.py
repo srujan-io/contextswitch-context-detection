@@ -48,17 +48,26 @@ class ContextShift:
                 if self.baseline_rms is not None:
                     self.noise_limit=max(200,min(self.baseline_rms*2.5,self.baseline_rms+.35*max(0,(self.peak_rms or 0)-self.baseline_rms)))
         recent=[s for s in list(self.visual) if now-s[0]<2]
-        face=sum(s[1] for s in recent)/max(1,len(recent));hand=sum(s[2] for s in recent)/max(1,len(recent))
+        face=sum(s[1] for s in recent)/max(1,len(recent))
+        hand_window=[s for s in recent if now-s[0]<.8]
+        hand=sum(s[2] for s in hand_window)/max(1,len(hand_window))
         busy=self.hands_busy or bool(self.last_hands and self.last_hands.get('two_hands_possibly_occupied')) or bool(re.search(r'\b(holding|soldering|hands occupied|hands busy|carrying)\b',self.context,re.I))
         editing=context.get('selected_element',{}).get('tag') in ('input','textarea') or context.get('text_entry',False) or bool(re.search(r'\b(typing|text entry|writing)\b',self.context,re.I))
+        current_hands=bool(hand_window and hand_window[-1][2] and not busy)
+        voice_ready=bool(sensors.get('MICROPHONE',{}).get('status')=='AVAILABLE' and self.noise_limit is not None and self.peak_rms is not None and self.peak_rms/max(1,self.baseline_rms or 0)>=1.5 and (self.peak_amplitude or 0)<32700)
+        # Idle voice is readiness, not a claim of live background recording.
+        # A recent measured noise spike suppresses it; an idle mic does not expire
+        # solely because the user has been controlling the page with hands.
+        if voice_ready and self.last_audio and now-self.last_audio[0]<2 and self.last_audio[1]>self.noise_limit:voice_ready=False
         if editing:desired='TYPED';reason='Text-entry context; gestures suppressed'
-        elif not busy and hand>=.7:desired='HAND';reason='Both hands fully in frame and a control pose is available'
-        elif face>=.7:desired='HEAD';reason='Reliable head tracking; hands unavailable or occupied'
-        elif sensors.get('MICROPHONE',{}).get('status')=='AVAILABLE' and self.audio and self.noise_limit is not None and self.peak_rms is not None and self.peak_rms/max(1,self.baseline_rms or 0)>=1.5 and (self.peak_amplitude or 0)<32700 and self.last_audio and now-self.last_audio[0]<30 and self.last_audio[1]<=self.noise_limit:
-            desired='VOICE';reason='Camera inputs unavailable; microphone capture calibrated'
+        elif current_hands and hand>=.7:desired='HAND';reason='Two hands fully recognized; hand control is ready'
+        elif voice_ready:desired='VOICE';reason='Hands missing, cropped or occupied; calibrated voice commands are ready (record on request)'
+        elif face>=.7:desired='HEAD';reason='Hands unavailable; using reliable head tracking'
         else:desired='TYPED';reason='No calibrated reliable motion input'
         if desired!=self.candidate:self.candidate=desired;self.since=now
-        if now-self.since>=1.5 or desired=='TYPED':self.current=desired;self.reason=reason
+        unsafe_hand=self.current=='HAND' and not current_hands
+        dwell=.5 if desired=='HAND' else 1.5
+        if now-self.since>=dwell or desired=='TYPED' or unsafe_hand:self.current=desired;self.reason=reason
         return self.current
     def snapshot(self):
         elapsed=0 if self.started is None else self.clock()-self.started
@@ -69,9 +78,10 @@ class ContextShift:
                 'visual_samples':len(self.visual),'audio_samples':len(self.audio),'noise_threshold_rms':self.noise_limit,
                 'audio_error':self.audio_error,
                 'duration_seconds':self.duration,'instruction':instruction if self.enabled and remaining>0 else 'Calibration complete' if self.finished else 'Start calibration when ready',
+                'assessment_complete':self.finished,'voice_recording':'on request only',
                 'baseline_rms':self.baseline_rms,'peak_rms':self.peak_rms,'peak_amplitude':self.peak_amplitude,
                 'speech_to_noise_ratio':None if self.peak_rms is None or self.baseline_rms is None else round(self.peak_rms/max(1,self.baseline_rms),2),
-                'hands':None if self.last_hands is None else {k:self.last_hands.get(k) for k in ('hand_count','fully_visible_count','both_hands_visible','two_hands_possibly_occupied','incomplete_frame')},
+                'hands':None if self.last_hands is None or self.last_visual is None or self.clock()-self.last_visual>.5 else {k:self.last_hands.get(k) for k in ('hand_count','fully_visible_count','both_hands_visible','two_hands_possibly_occupied','incomplete_frame')},
                 'hands_detection_limit':'Visibility is not proof that hands are free; user context overrides.'}
 
     def sample_microphone(self,device,lock,stop):
